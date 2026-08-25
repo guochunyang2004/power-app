@@ -18,15 +18,15 @@ An all-in-one AI browser wrapper — manage multiple AI chat websites in a singl
 
 ## Screenshots
 
-**Main Interface — Sidebar Site Switching + DeepSeek Harness Workspace**
+**Main Interface — Sidebar Site Switching + Kimi AI Chat**
 
 ![Power App Main Interface](docs/screenshots/main-interface.png)
 
-**Workspace View — DeepSeek Harness Local Dev Tool Integration**
+**Tool Integration — DeepSeek Harness Local Dev Workspace**
 
 ![Power App Workspace](docs/screenshots/workspace-view.png)
 
-> The screenshots show DeepSeek Harness (`http://127.0.0.1:3080`) integrated as a tool site. The left sidebar enables quick switching between AI sites and tools, while the right content area renders the third-party web app as a native Child Webview.
+> The screenshots show Power App managing multiple AI sites and web tools. The left sidebar organizes sites into AI Domestic, AI Foreign, and Tools groups with hotkey support, while the right content area renders third-party web apps (such as Kimi, DeepSeek Harness, etc.) as native Child Webviews.
 
 ## Tech Stack
 

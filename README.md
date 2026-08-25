@@ -18,15 +18,15 @@
 
 ## 界面截图
 
-**主界面 — 侧边栏站点切换 + DeepSeek Harness 工作区**
+**主界面 — 侧边栏站点切换 + Kimi AI 对话界面**
 
 ![Power App 主界面](docs/screenshots/main-interface.png)
 
-**工作区视图 — 集成 DeepSeek Harness 本地开发工具**
+**工具集成 — DeepSeek Harness 本地开发工作区**
 
 ![Power App 工作区](docs/screenshots/workspace-view.png)
 
-> 截图展示了 Power App 将 DeepSeek Harness（`http://127.0.0.1:3080`）作为工具类站点集成的效果。左侧侧边栏可快速切换 AI 站点和工具，右侧内容区为原生 Child Webview 渲染的第三方 Web 应用。
+> 截图展示了 Power App 集成多种 AI 站点和 Web 工具的效果。左侧侧边栏按「AI 国内」「AI 国外」「工具」分组管理站点并支持快捷键切换，右侧内容区为原生 Child Webview 渲染的第三方 Web 应用（如 Kimi、DeepSeek Harness 等）。
 
 ## 技术栈
 
