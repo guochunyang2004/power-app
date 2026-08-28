@@ -233,4 +233,4 @@ Power App 不仅限于 AI 对话，任何 Web 应用都可以作为站点集成�
 
 ## 许可证
 
-MIT
+本项目采用 [Apache License 2.0](LICENSE) 开源协议。

@@ -2,32 +2,10 @@ import { useMemo, useState, useCallback, useRef } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { invoke } from "@tauri-apps/api/core";
 import type { SiteConfig } from "../../types";
-import {
-  Plus,
-  Settings,
-  Bot,
-  Wrench,
-  Globe,
-  Edit2,
-  Trash2,
-} from "lucide-react";
+import { Plus, Settings, Edit2, Trash2 } from "lucide-react";
 
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 400;
-
-interface SiteGroup {
-  group: string;
-  label: string;
-  icon: React.ReactNode;
-  sites: SiteConfig[];
-}
-
-const GROUP_CONFIG: Record<string, { label: string; icon: React.ReactNode }> = {
-  ai_foreign: { label: "AI 国外", icon: <Bot size={14} /> },
-  ai_domestic: { label: "AI 国内", icon: <Bot size={14} /> },
-  tool: { label: "工具", icon: <Wrench size={14} /> },
-  other: { label: "其他", icon: <Globe size={14} /> },
-};
 
 export default function Sidebar() {
   const {
@@ -76,25 +54,14 @@ export default function Sidebar() {
     document.addEventListener("mouseup", handleMouseUp);
   }, [width]);
 
-  const groups = useMemo<SiteGroup[]>(() => {
-    const grouped: Record<string, SiteConfig[]> = {};
-    for (const site of sites) {
-      if (!site.enabled) continue;
-      const group = site.group;
-      if (!grouped[group]) grouped[group] = [];
-      grouped[group].push(site);
-    }
-
-    const order = ["ai_domestic", "ai_foreign", "tool", "other"];
-    return order
-      .filter((g) => grouped[g] && grouped[g].length > 0)
-      .map((g) => ({
-        group: g,
-        label: GROUP_CONFIG[g]?.label || g,
-        icon: GROUP_CONFIG[g]?.icon || <Globe size={14} />,
-        sites: grouped[g].sort((a, b) => a.order - b.order),
-      }));
-  }, [sites]);
+  // 左侧栏只显示用户自定义添加的站点，不再按分类展示内置站点
+  const customSites = useMemo<SiteConfig[]>(
+    () =>
+      sites
+        .filter((site) => site.enabled && site.custom)
+        .sort((a, b) => a.order - b.order),
+    [sites]
+  );
 
   const handleSwitch = async (siteId: string) => {
     setCurrentSite(siteId);
@@ -124,11 +91,11 @@ export default function Sidebar() {
     setShowAddSite(true);
   };
 
-  const handleDelete = async (siteId: string, e: React.MouseEvent) => {
+  const handleDelete = async (site: SiteConfig, e: React.MouseEvent) => {
     e.stopPropagation();
     // Hide child webviews first so confirm dialog is not blocked
     await invoke("hide_all_views").catch(() => {});
-    const confirmed = confirm("确定删除此站点？");
+    const confirmed = confirm(`确定删除站点「${site.name}」吗？`);
     if (!confirmed) {
       // Restore current view if cancelled
       if (currentSiteId) {
@@ -137,11 +104,9 @@ export default function Sidebar() {
       return;
     }
     try {
-      const newCurrentId = await invoke<string>("delete_site", { id: siteId });
+      await invoke<string>("delete_site", { id: site.id });
+      // loadSites 会重新选中剩余的自定义站点（或在没有时清空选择并隐藏视图）
       await loadSites();
-      if (newCurrentId) {
-        setCurrentSite(newCurrentId);
-      }
     } catch (err) {
       console.error("Failed to delete site:", err);
     }
@@ -162,28 +127,28 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Site groups */}
+      {/* Custom sites (flat list, no preset categories) */}
       <div className="flex-1 overflow-y-auto py-2">
-        {groups.map((group) => (
-          <div key={group.group} className="mb-2">
-            <div className="px-4 py-1.5 text-[11px] font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-              {group.icon}
-              {group.label}
-            </div>
-            {group.sites.map((site) => (
-              <SiteItem
-                key={site.id}
-                site={site}
-                isActive={site.id === currentSiteId}
-                onClick={() => handleSwitch(site.id)}
-                onEdit={(e) => handleEdit(site, e)}
-                onDelete={(e) => handleDelete(site.id, e)}
-                getInitial={getInitial}
-                getFaviconUrl={getFaviconUrl}
-              />
-            ))}
+        {customSites.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-gray-600">
+            暂无自定义站点
+            <br />
+            点击下方「添加」创建
           </div>
-        ))}
+        ) : (
+          customSites.map((site) => (
+            <SiteItem
+              key={site.id}
+              site={site}
+              isActive={site.id === currentSiteId}
+              onClick={() => handleSwitch(site.id)}
+              onEdit={(e) => handleEdit(site, e)}
+              onDelete={(e) => handleDelete(site, e)}
+              getInitial={getInitial}
+              getFaviconUrl={getFaviconUrl}
+            />
+          ))
+        )}
       </div>
 
       {/* Bottom actions */}

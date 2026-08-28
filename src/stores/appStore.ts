@@ -21,7 +21,7 @@ interface AppStore {
   loadSites: () => Promise<void>;
 }
 
-export const useAppStore = create<AppStore>((set) => ({
+export const useAppStore = create<AppStore>((set, get) => ({
   sites: [],
   currentSiteId: "",
   settings: {
@@ -47,11 +47,23 @@ export const useAppStore = create<AppStore>((set) => ({
   loadSites: async () => {
     try {
       const sites = await invoke<SiteConfig[]>("get_sites");
-      set({ sites: sites.sort((a, b) => a.order - b.order) });
-      // Auto-select the first enabled site
-      const firstEnabled = sites.find((s) => s.enabled);
-      if (firstEnabled) {
-        set({ currentSiteId: firstEnabled.id });
+      const sorted = sites.sort((a, b) => a.order - b.order);
+      set({ sites: sorted });
+      // The sidebar only shows custom sites, so the selection must stay on an
+      // enabled custom site; otherwise fall back to the first one, or clear the
+      // selection (and hide all views) when there are no custom sites.
+      const { currentSiteId } = get();
+      const stillValid = sorted.some(
+        (s) => s.id === currentSiteId && s.enabled && s.custom
+      );
+      if (stillValid) return;
+      const firstCustom = sorted.find((s) => s.enabled && s.custom);
+      if (firstCustom) {
+        set({ currentSiteId: firstCustom.id });
+        await invoke("switch_view", { id: firstCustom.id }).catch(() => {});
+      } else {
+        set({ currentSiteId: "" });
+        await invoke("hide_all_views").catch(() => {});
       }
     } catch (e) {
       console.error("Failed to load sites:", e);

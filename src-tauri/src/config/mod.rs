@@ -27,15 +27,38 @@ impl ConfigManager {
             AppConfig::default()
         };
 
-        let manager = Self {
+        let mut manager = Self {
             config_path,
             config,
         };
+        // Migrate old configs: the `custom` flag defaults to false, so mark any
+        // site that is not a built-in preset as user-added (custom).
+        if manager.migrate_custom_flags() {
+            manager.save().ok();
+        }
         // Save default config if it didn't exist
         if !manager.config_path.exists() {
             manager.save().ok();
         }
         manager
+    }
+
+    /// Mark sites whose id is not one of the built-in presets as custom.
+    /// Returns true if any site was updated.
+    fn migrate_custom_flags(&mut self) -> bool {
+        let default_ids: std::collections::HashSet<String> = AppConfig::default()
+            .sites
+            .iter()
+            .map(|s| s.id.clone())
+            .collect();
+        let mut changed = false;
+        for site in &mut self.config.sites {
+            if !site.custom && !default_ids.contains(site.id.as_str()) {
+                site.custom = true;
+                changed = true;
+            }
+        }
+        changed
     }
 
     pub fn config(&self) -> &AppConfig {

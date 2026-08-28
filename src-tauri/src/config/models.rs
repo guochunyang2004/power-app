@@ -10,6 +10,10 @@ pub struct SiteConfig {
     pub shortcut: Option<String>,
     pub enabled: bool,
     pub order: u32,
+    /// Whether this site was added by the user (custom sites are shown in the
+    /// sidebar and can be edited/deleted; built-in presets are hidden there).
+    #[serde(default)]
+    pub custom: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -52,6 +56,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+1".to_string()),
                     enabled: true,
                     order: 0,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "kimi".to_string(),
@@ -62,6 +67,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+2".to_string()),
                     enabled: true,
                     order: 1,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "doubao".to_string(),
@@ -72,6 +78,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+3".to_string()),
                     enabled: true,
                     order: 2,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "tongyi".to_string(),
@@ -82,6 +89,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+4".to_string()),
                     enabled: true,
                     order: 3,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "yiyan".to_string(),
@@ -92,6 +100,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+5".to_string()),
                     enabled: true,
                     order: 4,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "chatglm".to_string(),
@@ -102,6 +111,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+6".to_string()),
                     enabled: true,
                     order: 5,
+                    custom: false,
                 },
                 // AI 国外
                 SiteConfig {
@@ -113,6 +123,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+7".to_string()),
                     enabled: true,
                     order: 10,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "claude".to_string(),
@@ -123,6 +134,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+8".to_string()),
                     enabled: true,
                     order: 11,
+                    custom: false,
                 },
                 SiteConfig {
                     id: "gemini".to_string(),
@@ -133,6 +145,7 @@ impl Default for AppConfig {
                     shortcut: Some("Alt+9".to_string()),
                     enabled: true,
                     order: 12,
+                    custom: false,
                 },
                 // 工具
                 SiteConfig {
@@ -144,6 +157,7 @@ impl Default for AppConfig {
                     shortcut: None,
                     enabled: true,
                     order: 20,
+                    custom: false,
                 },
             ],
             settings: AppSettings::default(),

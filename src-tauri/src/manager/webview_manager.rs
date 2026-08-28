@@ -132,64 +132,105 @@ impl WebviewManager {
 
 /// Build JavaScript code to inject a message into an AI chat interface
 fn build_broadcast_js(message: &str) -> String {
-    let escaped = message
-        .replace('\\', "\\\\")
-        .replace('`', "\\`")
-        .replace('$', "\\$");
+    // JSON encoding keeps newlines, quotes and backslashes valid in the injected script.
+    let escaped = serde_json::to_string(message).unwrap_or_else(|_| "\"\"".to_string());
     format!(
         r#"(function() {{
-  var msg = `{escaped}`;
+  var msg = {escaped};
+  var visible = function(el) {{
+    var style = window.getComputedStyle(el);
+    var rect = el.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' &&
+      rect.width > 0 && rect.height > 0 && !el.disabled;
+  }};
+  var dispatchInput = function(el) {{
+    try {{
+      el.dispatchEvent(new InputEvent('beforeinput', {{ bubbles: true, composed: true,
+        inputType: 'insertText', data: msg }}));
+    }} catch (_) {{}}
+    el.dispatchEvent(new Event('input', {{ bubbles: true, composed: true }}));
+    el.dispatchEvent(new Event('change', {{ bubbles: true, composed: true }}));
+  }};
+  var buttonVisible = function(el) {{
+    var style = window.getComputedStyle(el);
+    var rect = el.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' &&
+      rect.width > 0 && rect.height > 0;
+  }};
+  var buttonEnabled = function(el) {{
+    var cls = (el.className || '').toString().toLowerCase();
+    return buttonVisible(el) && !el.disabled &&
+      el.getAttribute('aria-disabled') !== 'true' && !/disabled/.test(cls);
+  }};
+  var send = function(el) {{
+    var findButton = function() {{
+      var buttons = Array.prototype.slice.call(document.querySelectorAll(
+        'button, [role="button"], input[type="submit"], ' +
+        '[data-testid*="send"], [data-testid*="Send"], ' +
+        '[class*="send"], [class*="Send"]'
+      ));
+      var inputRect = el.getBoundingClientRect();
+      var scored = buttons.map(function(button) {{
+        var label = ((button.getAttribute('aria-label') || '') + ' ' +
+          (button.getAttribute('title') || '') + ' ' + (button.textContent || '') + ' ' +
+          (button.getAttribute('data-testid') || '') + ' ' + (button.className || '')).toLowerCase();
+        var rect = button.getBoundingClientRect();
+        var distance = Math.abs(rect.left - inputRect.right) + Math.abs(rect.top - inputRect.bottom);
+        var score = distance;
+        if (button.type === 'submit') score -= 1000;
+        if (/send|发送|提交|arrow-up|paper-plane/.test(label)) score -= 500;
+        return {{ button: button, score: score }};
+      }}).filter(function(item) {{ return buttonEnabled(item.button); }});
+      scored.sort(function(a, b) {{ return a.score - b.score; }});
+      return scored.length ? scored[0].button : null;
+    }};
+    var attempts = 0;
+    var trySend = function() {{
+      var button = findButton();
+      if (button) {{
+        button.click();
+        return;
+      }}
+      if (++attempts < 8) setTimeout(trySend, 150);
+      else {{
+        el.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter',
+          keyCode: 13, which: 13, bubbles: true, composed: true }}));
+        el.dispatchEvent(new KeyboardEvent('keyup', {{ key: 'Enter', code: 'Enter',
+          keyCode: 13, which: 13, bubbles: true, composed: true }}));
+      }}
+    }};
+    // Tongyi enables its icon-only send button after the editor state commits.
+    setTimeout(trySend, 250);
+    return 'queued';
+  }};
 
-  // Strategy 1: textarea
-  var input = document.querySelector('textarea');
-  if (input) {{
+  // Kimi uses a textarea/contenteditable editor that can be hidden during layout.
+  var candidates = Array.prototype.slice.call(document.querySelectorAll(
+    'textarea, [contenteditable="true"], [role="textbox"]'
+  )).filter(visible);
+  var input = candidates.find(function(el) {{
+    return el.matches('textarea') || el.getAttribute('contenteditable') === 'true';
+  }}) || candidates[0];
+  if (!input) return 'error:no_input_found';
+
+  input.focus();
+  if (input.matches('textarea, input')) {{
+    var proto = input.matches('textarea') ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    var descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (descriptor && descriptor.set) descriptor.set.call(input, msg);
+    else input.value = msg;
+  }} else {{
+    // Use the browser editing command so ProseMirror/Slate receives a real edit.
     input.focus();
-    // Use native setter to bypass React/Vue controlled input
-    var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-    nativeSetter.call(input, msg);
-    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-    // Try to find send button
-    var sendBtn = document.querySelector(
-      '[data-testid="send-button"], ' +
-      'button[type="submit"], ' +
-      'button[aria-label*="end"], ' +
-      'button[aria-label*="Send"], ' +
-      'button[aria-label*="发送"]'
-    );
-    if (sendBtn && !sendBtn.disabled) {{
-      setTimeout(function() {{ sendBtn.click(); }}, 100);
-      return 'sent:button';
+    var inserted = false;
+    try {{ inserted = document.execCommand('insertText', false, msg); }} catch (_) {{}}
+    if (!inserted) {{
+      input.innerHTML = '';
+      input.appendChild(document.createTextNode(msg));
     }}
-    // Fallback: Enter key
-    setTimeout(function() {{
-      input.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }}));
-    }}, 100);
-    return 'sent:enter';
   }}
-
-  // Strategy 2: contenteditable div
-  var ce = document.querySelector('[contenteditable="true"]');
-  if (ce) {{
-    ce.focus();
-    ce.textContent = msg;
-    ce.dispatchEvent(new Event('input', {{ bubbles: true }}));
-    var sendBtn = document.querySelector(
-      'button[type="submit"], ' +
-      'button[aria-label*="end"], ' +
-      'button[aria-label*="Send"], ' +
-      'button[aria-label*="发送"]'
-    );
-    if (sendBtn && !sendBtn.disabled) {{
-      setTimeout(function() {{ sendBtn.click(); }}, 100);
-      return 'sent:button';
-    }}
-    setTimeout(function() {{
-      ce.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }}));
-    }}, 100);
-    return 'sent:enter';
-  }}
-
-  return 'error:no_input_found';
+  dispatchInput(input);
+  return send(input);
 }})()"#
     )
 }

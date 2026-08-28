@@ -233,4 +233,4 @@ Power App is not limited to AI chat — any web application can be integrated as
 
 ## License
 
-MIT
+This project is licensed under the [Apache License 2.0](LICENSE).

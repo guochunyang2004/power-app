@@ -56,6 +56,7 @@ export default function AddSite() {
       shortcut: shortcut.trim() || null,
       enabled: true,
       order: editingSite?.order ?? 999,
+      custom: editingSite?.custom ?? true,
     };
 
     try {
