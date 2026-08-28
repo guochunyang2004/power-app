@@ -11,7 +11,7 @@ export interface SiteConfig {
   shortcut: string | null;
   enabled: boolean;
   order: number;
-  /** 是否为用户自定义添加的站点（左侧栏只显示自定义站点） */
+  /** 是否为用户自定义添加的站点 */
   custom: boolean;
 }
 

@@ -54,14 +54,22 @@ export default function Sidebar() {
     document.addEventListener("mouseup", handleMouseUp);
   }, [width]);
 
-  // 左侧栏只显示用户自定义添加的站点，不再按分类展示内置站点
-  const customSites = useMemo<SiteConfig[]>(
-    () =>
-      sites
-        .filter((site) => site.enabled && site.custom)
-        .sort((a, b) => a.order - b.order),
-    [sites]
-  );
+  const groupedSites = useMemo(() => {
+    const groups: { key: SiteConfig["group"]; label: string }[] = [
+      { key: "ai_domestic", label: "AI 国内" },
+      { key: "ai_foreign", label: "AI 国外" },
+      { key: "tool", label: "工具" },
+      { key: "other", label: "其他" },
+    ];
+    return groups
+      .map((group) => ({
+        ...group,
+        sites: sites
+          .filter((site) => site.enabled && site.group === group.key)
+          .sort((a, b) => a.order - b.order),
+      }))
+      .filter((group) => group.sites.length > 0);
+  }, [sites]);
 
   const handleSwitch = async (siteId: string) => {
     setCurrentSite(siteId);
@@ -127,27 +135,33 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Custom sites (flat list, no preset categories) */}
+      {/* Sites grouped by category */}
       <div className="flex-1 overflow-y-auto py-2">
-        {customSites.length === 0 ? (
+        {groupedSites.map((group) => (
+          <div key={group.key} className="mb-3">
+            <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              {group.label}
+            </div>
+            {group.sites.map((site) => (
+              <SiteItem
+                key={site.id}
+                site={site}
+                isActive={site.id === currentSiteId}
+                onClick={() => handleSwitch(site.id)}
+                onEdit={(e) => handleEdit(site, e)}
+                onDelete={(e) => handleDelete(site, e)}
+                getInitial={getInitial}
+                getFaviconUrl={getFaviconUrl}
+              />
+            ))}
+          </div>
+        ))}
+        {groupedSites.length === 0 && (
           <div className="px-4 py-6 text-center text-xs text-gray-600">
-            暂无自定义站点
+            暂无可用站点
             <br />
             点击下方「添加」创建
           </div>
-        ) : (
-          customSites.map((site) => (
-            <SiteItem
-              key={site.id}
-              site={site}
-              isActive={site.id === currentSiteId}
-              onClick={() => handleSwitch(site.id)}
-              onEdit={(e) => handleEdit(site, e)}
-              onDelete={(e) => handleDelete(site, e)}
-              getInitial={getInitial}
-              getFaviconUrl={getFaviconUrl}
-            />
-          ))
         )}
       </div>
 

@@ -49,18 +49,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const sites = await invoke<SiteConfig[]>("get_sites");
       const sorted = sites.sort((a, b) => a.order - b.order);
       set({ sites: sorted });
-      // The sidebar only shows custom sites, so the selection must stay on an
-      // enabled custom site; otherwise fall back to the first one, or clear the
-      // selection (and hide all views) when there are no custom sites.
+      // Keep the current site valid across all built-in and custom categories.
       const { currentSiteId } = get();
       const stillValid = sorted.some(
-        (s) => s.id === currentSiteId && s.enabled && s.custom
+        (s) => s.id === currentSiteId && s.enabled
       );
       if (stillValid) return;
-      const firstCustom = sorted.find((s) => s.enabled && s.custom);
-      if (firstCustom) {
-        set({ currentSiteId: firstCustom.id });
-        await invoke("switch_view", { id: firstCustom.id }).catch(() => {});
+      const firstEnabled = sorted.find((s) => s.enabled);
+      if (firstEnabled) {
+        set({ currentSiteId: firstEnabled.id });
+        await invoke("switch_view", { id: firstEnabled.id }).catch(() => {});
       } else {
         set({ currentSiteId: "" });
         await invoke("hide_all_views").catch(() => {});
