@@ -131,23 +131,29 @@ jobs:
       - name: List artifacts
         run: find artifacts -type f
 
+      - name: Collect release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f -exec cp {} release-files/ \;
+          ls -lh release-files/
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          name: 'Power App ${{ github.ref_name }}'
-          body: |
-            ## Power App ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --draft \
+            --title "Power App ${{ github.ref_name }}" \
+            --notes "## Power App ${{ github.ref_name }}
 
-            多平台安装包已就绪，请下载对应平台的安装包。
+          多平台安装包已就绪，请下载对应平台的安装包。
 
-            | 平台 | 格式 |
-            |------|------|
-            | Windows | .exe (NSIS) / .msi |
-            | Linux | .deb / .rpm / .AppImage |
-            | macOS | .dmg |
-          files: |
-            artifacts/**/*
+          | 平台 | 格式 |
+          |------|------|
+          | Windows | .exe (NSIS) / .msi |
+          | Linux | .deb / .rpm / .AppImage |
+          | macOS | .dmg |" \
+            release-files/*
 
       - name: Create Gitee Release
         env:
