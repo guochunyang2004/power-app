@@ -141,19 +141,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --draft \
-            --title "Power App ${{ github.ref_name }}" \
-            --notes "## Power App ${{ github.ref_name }}
+          TAG="${{ github.ref_name }}"
+          NOTES="## Power App ${TAG}
 
-          多平台安装包已就绪，请下载对应平台的安装包。
+多平台安装包已就绪，请下载对应平台的安装包。
 
-          | 平台 | 格式 |
-          |------|------|
-          | Windows | .exe (NSIS) / .msi |
-          | Linux | .deb / .rpm / .AppImage |
-          | macOS | .dmg |" \
-            release-files/*
+| 平台 | 格式 |
+|------|------|
+| Windows | .exe (NSIS) / .msi |
+| Linux | .deb / .rpm / .AppImage |
+| macOS | .dmg |"
+
+          # Create or update release with assets
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, uploading assets..."
+            gh release upload "$TAG" release-files/* --clobber
+          else
+            echo "Creating release $TAG..."
+            gh release create "$TAG" \
+              --title "Power App ${TAG}" \
+              --notes "$NOTES" \
+              release-files/*
+          fi
 
       - name: Create Gitee Release
         env:
