@@ -162,7 +162,7 @@ jobs:
         run: |
           set -e
           TAG_NAME="${{ github.ref_name }}"
-          OWNER="guochunyang2004"
+          OWNER="gcyai"
           REPO="power-app"
           API="https://gitee.com/api/v5"
 
