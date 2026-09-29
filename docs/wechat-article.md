@@ -10,7 +10,7 @@
 
 **Power App** 正是为这个场景打造的桌面应用。
 
-它把多个 AI 网站和 Web 工具集中到一个 Windows 窗口中，通过侧边栏、快捷键和消息广播，构建一个更适合实际工作的 AI 工具箱。
+它把多个 AI 网站和 Web 工具集中到一个桌面窗口中，支持 Windows、Linux 和 macOS 三大平台，通过侧边栏、快捷键和消息广播，构建一个更适合实际工作的 AI 工具箱。
 
 ## 一个窗口，管理多个 AI 站点
 
@@ -70,7 +70,7 @@ Power App 的前端使用 React + TypeScript，后端使用 Rust，桌面容器�
 | 后端 | Rust 2021 |
 | 构建工具 | Vite + Tailwind CSS |
 | 状态管理 | Zustand |
-| 浏览器内核 | Windows WebView2 |
+| 浏览器内核 | Windows WebView2 / Linux WebKitGTK / macOS WKWebView |
 
 前端通过 Tauri IPC 调用 Rust 命令，由 WebviewManager 负责站点 WebView 的创建、显示、隐藏、导航和销毁。
 
@@ -83,7 +83,7 @@ Rust Commands
     ▼
 WebviewManager
     ▼
-WebView2 Child Webview
+WebView Child Webview（跨平台原生内核）
 ```
 
 ## 适合哪些人使用？
@@ -100,28 +100,35 @@ Power App 不是一个新的 AI 模型，而是一个帮助你更高效使用现
 
 ### 环境要求
 
-- Windows
-- Node.js 18 或更高版本
-- Rust 1.70 或更高版本
-- WebView2 Runtime
-- Tauri Windows 开发环境
+**Windows：**
+- Windows 10 或更高版本
+- WebView2 Runtime（Windows 10/11 通常已内置）
+- Node.js 18+、Rust 1.70+
 
-### 安装依赖
+**Linux：**
+- Ubuntu 22.04 / Fedora / Arch 等主流发行版
+- WebKitGTK 4.1、libappindicator、librsvg
+- Node.js 18+、Rust 1.70+
+
+**macOS：**
+- macOS 12 (Monterey) 或更高版本
+- Node.js 18+、Rust 1.70+
+- Xcode Command Line Tools
+
+### 下载安装
+
+前往 [GitHub Releases](https://github.com/guochunyang2004/power-app/releases) 页面，下载对应平台的安装包：
+
+- **Windows**：`.exe`（NSIS 安装包）或 `.msi`
+- **Linux**：`.deb`、`.AppImage` 或 `.rpm`
+- **macOS**：`.dmg`
+
+### 从源码构建
 
 ```bash
 npm install
-```
-
-### 启动开发环境
-
-```bash
-npm run tauri dev
-```
-
-### 构建安装包
-
-```bash
-npm run tauri build
+npm run tauri dev      # 启动开发环境
+npm run tauri build    # 构建安装包
 ```
 
 ## 开源地址
