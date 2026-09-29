@@ -160,39 +160,54 @@ jobs:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         if: env.GITEE_TOKEN != ''
         run: |
+          set -e
           TAG_NAME="${{ github.ref_name }}"
           OWNER="guochunyang2004"
           REPO="power-app"
           API="https://gitee.com/api/v5"
 
+          RELEASE_BODY="Power App ${TAG_NAME} - 多平台安装包已就绪"
+
           # Create Gitee release
-          RESPONSE=$(curl -s -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
+          echo "Creating Gitee release for tag: ${TAG_NAME}"
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"access_token\": \"${GITEE_TOKEN}\",
-              \"tag_name\": \"${TAG_NAME}\",
-              \"name\": \"Power App ${TAG_NAME}\",
-              \"body\": \"## Power App ${TAG_NAME}\n\n多平台安装包已就绪，请下载对应平台的安装包。\n\n| 平台 | 格式 |\n|------|------|\n| Windows | .exe (NSIS) / .msi |\n| Linux | .deb / .rpm / .AppImage |\n| macOS | .dmg |\",
-              \"target_commitish\": \"master\"
-            }")
+            -d "$(jq -n \
+              --arg token "${GITEE_TOKEN}" \
+              --arg tag "${TAG_NAME}" \
+              --arg name "Power App ${TAG_NAME}" \
+              --arg body "${RELEASE_BODY}" \
+              --arg commit "master" \
+              '{access_token: $token, tag_name: $tag, name: $name, body: $body, target_commitish: $commit}')")
 
-          RELEASE_ID=$(echo "$RESPONSE" | jq -r '.id')
-          echo "Gitee Release created: ID=$RELEASE_ID"
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -1)
+          RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+          echo "HTTP Status: ${HTTP_CODE}"
+          echo "Response: ${RESPONSE}"
 
-          if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
-            echo "Failed to create Gitee release: $RESPONSE"
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "Failed to create Gitee release (HTTP ${HTTP_CODE})"
             exit 1
           fi
 
+          RELEASE_ID=$(echo "$RESPONSE" | jq -r '.id')
+          echo "Gitee Release created: ID=${RELEASE_ID}"
+
           # Upload all artifact files
-          find artifacts -type f | while read -r FILE; do
-            FILENAME=$(basename "$FILE")
-            echo "Uploading: $FILENAME"
-            curl -s -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/attach_files" \
-              -H "Authorization: token ${GITEE_TOKEN}" \
-              -F "file=@${FILE}" \
-              -F "access_token=${GITEE_TOKEN}"
-            echo "Uploaded: $FILENAME"
+          for FILE in release-files/*; do
+            if [ -f "$FILE" ]; then
+              FILENAME=$(basename "$FILE")
+              echo "Uploading: ${FILENAME}"
+              UPLOAD_RESULT=$(curl -s -w "\n%{http_code}" -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/attach_files" \
+                -F "file=@${FILE}" \
+                -F "access_token=${GITEE_TOKEN}")
+              UPLOAD_CODE=$(echo "$UPLOAD_RESULT" | tail -1)
+              if [ "$UPLOAD_CODE" = "201" ]; then
+                echo "Uploaded: ${FILENAME}"
+              else
+                echo "Failed to upload ${FILENAME} (HTTP ${UPLOAD_CODE})"
+              fi
+            fi
           done
 
-          echo "All artifacts uploaded to Gitee Release."
+          echo "Gitee Release complete."
